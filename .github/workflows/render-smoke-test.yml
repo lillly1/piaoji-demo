@@ -24,7 +24,7 @@ jobs:
           mkdir -p diagnostics
           HEALTH_CODE=000
           for attempt in $(seq 1 36); do
-            HEALTH_CODE=$(curl -sS -o diagnostics/health-body.txt -w "%{http_code}" --max-time 70 https://piaoji-live-fares.onrender.com/health)
+            HEALTH_CODE=$(curl -sS -o diagnostics/health-body.txt -w "%{http_code}" --max-time 70 https://piaoji-live-fares.onrender.com/health?check=$(date +%s))
             if [ "$HEALTH_CODE" = "200" ] && grep -q "diagnostic-v2" diagnostics/health-body.txt; then break; fi
             sleep 10
           done
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          API_CODE=$(curl -sS -o diagnostics/search-body.json -w "%{http_code}" --max-time 120             -H "Content-Type: application/json"             -d '{"from_city":"北京","to_city":"上海","date":"2026-08-08","passengers":1}'             https://piaoji-live-fares.onrender.com/api/search)
+          API_CODE=$(curl -sS -o diagnostics/search-body.json -w "%{http_code}" --max-time 120             -H "Content-Type: application/json"             -d '{"from_city":"北京","to_city":"上海","date":"2026-08-08","passengers":1}'             https://piaoji-live-fares.onrender.com/api/search?check=$(date +%s))
           printf "%s" "$API_CODE" > diagnostics/search-status.txt
           python - <<'PY'
           import datetime, json, pathlib
