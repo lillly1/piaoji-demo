@@ -1,9 +1,29 @@
 {
-  "checkedAt": "2026-07-23T07:33:26.026499+00:00",
+  "checkedAt": "2026-07-23T08:03:38.952425+00:00",
   "healthStatus": "200",
-  "healthBody": "{\"status\":\"ok\"}",
+  "healthBody": "{\"status\":\"ok\",\"revision\":\"diagnostic-v2\"}",
   "searchStatus": "502",
   "searchBody": {
-    "detail": "第三方公开页可访问性受限，未取得可验证展示价"
+    "detail": {
+      "message": "第三方公开页可访问性受限，未取得可验证展示价",
+      "attempts": [
+        {
+          "channel": "public-html",
+          "error": "HTTPError",
+          "message": "HTTP Error 432: Unknown"
+        },
+        {
+          "channel": "jina-reader-browser",
+          "bytes": 150,
+          "rows": 0,
+          "sample": "Title: \n\nURL Source: https://m.ctrip.com/html5/flight/BJS-SHA-day-16.html\n\nWarning: Target URL returned error 432\n\nMarkdown Content:\nwhaleguard block\n"
+        },
+        {
+          "channel": "crawl4ai-browser",
+          "error": "crawl_failed",
+          "message": "Blocked by anti-bot protection: Structural: minimal_text on small page (168 bytes, 16 chars visible)"
+        }
+      ]
+    }
   }
 }
