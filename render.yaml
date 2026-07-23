@@ -6,7 +6,7 @@ services:
     branch: main
     dockerfilePath: ./Dockerfile
     region: singapore
-    plan: starter
+    plan: free
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
