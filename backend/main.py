@@ -56,7 +56,7 @@ def parse_rows(text: str, source_url: str) -> list[dict[str, Any]]:
             continue
         key = (depart, dep_airport, arrive, arr_airport)
         price = int(price_raw)
-        quote = {"platform":"携程","price":price,"url":source_url,"kind":"public-display"}
+        quote = ["携程", price]
         if key not in grouped:
             grouped[key] = {
                 "id": len(grouped) + 1,
