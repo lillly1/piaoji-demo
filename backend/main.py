@@ -170,7 +170,7 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "revision": "diagnostic-v2"}
 
 @app.post("/api/search")
 async def search(payload: SearchRequest) -> dict[str, Any]:
