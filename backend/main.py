@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import html as html_lib
+import os
 import re
 import time
 import urllib.request
@@ -51,13 +52,18 @@ def public_html_text(raw: str) -> str:
 
 def fetch_reader_text(url: str) -> str:
     reader_url = "https://r.jina.ai/" + url
-    request = urllib.request.Request(reader_url, headers={
+    headers = {
         "User-Agent": "PiaojiLiveFareTest/1.0",
         "Accept": "text/plain",
         "x-no-cache": "true",
         "x-timeout": "30",
         "x-engine": "browser",
-    })
+    }
+    jina_key = os.getenv("JINA_API_KEY", "").strip()
+    if jina_key:
+        headers["Authorization"] = "Bearer " + jina_key
+        headers["x-proxy"] = "auto"
+    request = urllib.request.Request(reader_url, headers=headers)
     with urllib.request.urlopen(request, timeout=55) as response:
         return response.read().decode("utf-8", errors="replace")
 
@@ -117,7 +123,7 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         raise HTTPException(422, detail="仅支持今天起 90 天内的日期")
     source_url = f"https://m.ctrip.com/html5/flight/{origin}-{destination}-day-{day}.html"
     flights: list[dict[str, Any]] = []
-    attempts: list[dict[str, Any]] = []
+    attempts: list[dict[str, Any]] = [{"channel": "configuration", "jinaProxyConfigured": bool(os.getenv("JINA_API_KEY", "").strip())}]
     channel = "public-html"
     try:
         raw_html = await asyncio.to_thread(fetch_public_html, source_url)
