@@ -1,0 +1,59 @@
+name: Smoke test Render production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/render-smoke-test.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for public health endpoint
+        shell: bash
+        run: |
+          set +e
+          mkdir -p diagnostics
+          HEALTH_CODE=000
+          for attempt in $(seq 1 36); do
+            HEALTH_CODE=$(curl -sS -o diagnostics/health-body.txt -w "%{http_code}" --max-time 70 https://piaoji-live-fares.onrender.com/health)
+            if [ "$HEALTH_CODE" = "200" ]; then break; fi
+            sleep 10
+          done
+          printf "%s" "$HEALTH_CODE" > diagnostics/health-status.txt
+      - name: Query one real route
+        shell: bash
+        run: |
+          set +e
+          API_CODE=$(curl -sS -o diagnostics/search-body.json -w "%{http_code}" --max-time 120             -H "Content-Type: application/json"             -d '{"from_city":"北京","to_city":"上海","date":"2026-08-08","passengers":1}'             https://piaoji-live-fares.onrender.com/api/search)
+          printf "%s" "$API_CODE" > diagnostics/search-status.txt
+          python - <<'PY'
+          import datetime, json, pathlib
+          p=pathlib.Path("diagnostics")
+          raw=(p/"search-body.json").read_text("utf-8",errors="replace") if (p/"search-body.json").exists() else ""
+          try: body=json.loads(raw)
+          except Exception: body={"raw":raw[:4000]}
+          report={
+            "checkedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "healthStatus":(p/"health-status.txt").read_text().strip(),
+            "healthBody":(p/"health-body.txt").read_text("utf-8",errors="replace")[:1000] if (p/"health-body.txt").exists() else "",
+            "searchStatus":(p/"search-status.txt").read_text().strip(),
+            "searchBody":body,
+          }
+          (p/"render-smoke-test.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Commit diagnostic result
+        shell: bash
+        run: |
+          git config user.name "piaoji-smoke-test"
+          git config user.email "actions@users.noreply.github.com"
+          git add diagnostics/render-smoke-test.json
+          git commit -m "diagnostics: record Render production smoke test"
+          git push
