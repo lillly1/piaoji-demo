@@ -49,6 +49,18 @@ def public_html_text(raw: str) -> str:
     raw = re.sub(r"<[^>]+>", "\\n", raw)
     return html_lib.unescape(raw).replace("\\xa0", " ")
 
+def fetch_reader_text(url: str) -> str:
+    reader_url = "https://r.jina.ai/" + url
+    request = urllib.request.Request(reader_url, headers={
+        "User-Agent": "PiaojiLiveFareTest/1.0",
+        "Accept": "text/plain",
+        "x-no-cache": "true",
+        "x-timeout": "30",
+        "x-engine": "browser",
+    })
+    with urllib.request.urlopen(request, timeout=55) as response:
+        return response.read().decode("utf-8", errors="replace")
+
 def fetch_public_html(url: str) -> str:
     request = urllib.request.Request(url, headers={
         "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36",
@@ -111,6 +123,13 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         flights = parse_rows(public_html_text(raw_html), source_url)
     except Exception:
         flights = []
+    if not flights:
+        channel = "jina-reader-browser"
+        try:
+            reader_text = await asyncio.to_thread(fetch_reader_text, source_url)
+            flights = parse_rows(reader_text, source_url)
+        except Exception:
+            flights = []
     if not flights:
         channel = "crawl4ai-browser"
         browser = BrowserConfig(headless=True, browser_type="chromium")
