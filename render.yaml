@@ -9,6 +9,11 @@ services:
     plan: free
     healthCheckPath: /health
     autoDeployTrigger: commit
+    buildFilter:
+      ignoredPaths:
+        - diagnostics/**
+        - .github/**
+        - README.md
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
