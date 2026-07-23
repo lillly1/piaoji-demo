@@ -1,16 +1,20 @@
-# 票迹 · 国内机票比价演示
+# 票迹 · 国内机票真实展示价测试版
 
-这是一个仅使用模拟数据的公开演示网页。
+票迹现在包含一个基于 FastAPI、Craw4AI 和 Chromium 的动态后端。搜索时，后端按城市与日期访问第三方公开航线页，只返回当次成功识别的公开展示价；不再生成或回退到模拟价格。
 
-公开页面：https://lillly1.github.io/piaoji-demo/
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Flillly1%2Fpiaoji-demo)
 
-- 航班与价格均为演示数据
-- 支持城市、日期、人数搜索
-- 支持航空公司、时段、机场、价格筛选
-- 支持排序、报价展开与模拟购买
-- 支持桌面端与移动端
-- 由 GitHub Pages 持续部署
+## 当前真实数据范围
 
-> 演示数据，实际价格以平台为准。
+- 首个数据适配器：携程移动端公开航线页
+- 支持：单程、1–9 人、今天起 90 天内、常用国内民航城市
+- 返回：出发/到达时间、机场、公开展示价、数据来源和抓取时间
+- 失败行为：显示“暂无实时报价”，不会展示模拟价格
+- 缓存：同一航线和日期 5 分钟，减少重复访问
+- 最终价格仍需在第三方平台页面再次核对
 
-部署验证：2026-07-15
+## 部署
+
+仓库根目录的 `render.yaml` 定义了新加坡区域的 Render Docker Web Service。容器使用 Crawl4AI 官方镜像并通过 `/health` 接受健康检查。
+
+GitHub Pages 只能展示静态前端，不能运行 Craw4AI。完整动态版本应通过 Render 生成的 `onrender.com` 地址访问。
