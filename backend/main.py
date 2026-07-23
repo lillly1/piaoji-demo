@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -93,7 +93,7 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         page_timeout=45000,
         wait_until="domcontentloaded",
         delay_before_return_html=3.0,
-        cache_mode="bypass",
+        cache_mode=CacheMode.BYPASS,
     )
     async with AsyncWebCrawler(config=browser) as crawler:
         result = await crawler.arun(url=source_url, config=config)
