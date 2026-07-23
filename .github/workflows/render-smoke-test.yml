@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/render-smoke-test.yml"
+      - "backend/main.py"
 
 permissions:
   contents: write
@@ -16,6 +17,8 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+      - name: Allow Render auto-deploy to replace production
+        run: sleep 210
       - name: Wait for public health endpoint
         shell: bash
         run: |
