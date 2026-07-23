@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-07-23T07:00:55.219532+00:00",
+  "healthStatus": "200",
+  "healthBody": "{\"status\":\"ok\"}",
+  "searchStatus": "502",
+  "searchBody": {
+    "detail": "第三方公开页暂时无法读取"
+  }
+}
