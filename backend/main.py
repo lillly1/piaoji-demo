@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import html as html_lib
 import re
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +43,20 @@ def minutes(value: str) -> int:
 def duration_minutes(depart: str, arrive: str) -> int:
     value = minutes(arrive) - minutes(depart)
     return value if value > 0 else value + 24 * 60
+
+def public_html_text(raw: str) -> str:
+    raw = re.sub(r"<(script|style)[^>]*>.*?</\\1>", " ", raw, flags=re.I | re.S)
+    raw = re.sub(r"<[^>]+>", "\\n", raw)
+    return html_lib.unescape(raw).replace("\\xa0", " ")
+
+def fetch_public_html(url: str) -> str:
+    request = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Accept": "text/html,application/xhtml+xml",
+    })
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read().decode("utf-8", errors="replace")
 
 def parse_rows(text: str, source_url: str) -> list[dict[str, Any]]:
     normalized = re.sub(r"[*_#|]+", " ", text)
@@ -88,21 +104,29 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
     if day < 0 or day > 89:
         raise HTTPException(422, detail="仅支持今天起 90 天内的日期")
     source_url = f"https://m.ctrip.com/html5/flight/{origin}-{destination}-day-{day}.html"
-    browser = BrowserConfig(headless=True, browser_type="chromium")
-    config = CrawlerRunConfig(
-        page_timeout=45000,
-        wait_until="domcontentloaded",
-        delay_before_return_html=3.0,
-        cache_mode=CacheMode.BYPASS,
-    )
-    async with AsyncWebCrawler(config=browser) as crawler:
-        result = await crawler.arun(url=source_url, config=config)
-    if not result.success:
-        raise HTTPException(502, detail="第三方公开页暂时无法读取")
-    markdown = getattr(result.markdown, "raw_markdown", None) or str(result.markdown)
-    flights = parse_rows(markdown, source_url)
+    flights: list[dict[str, Any]] = []
+    channel = "public-html"
+    try:
+        raw_html = await asyncio.to_thread(fetch_public_html, source_url)
+        flights = parse_rows(public_html_text(raw_html), source_url)
+    except Exception:
+        flights = []
     if not flights:
-        raise HTTPException(502, detail="已访问公开页，但没有识别到可验证的展示价")
+        channel = "crawl4ai-browser"
+        browser = BrowserConfig(headless=True, browser_type="chromium")
+        config = CrawlerRunConfig(
+            page_timeout=60000,
+            wait_until="domcontentloaded",
+            delay_before_return_html=5.0,
+            cache_mode=CacheMode.BYPASS,
+        )
+        async with AsyncWebCrawler(config=browser) as crawler:
+            result = await crawler.arun(url=source_url, config=config)
+        if result.success:
+            markdown = getattr(result.markdown, "raw_markdown", None) or str(result.markdown)
+            flights = parse_rows(markdown, source_url)
+    if not flights:
+        raise HTTPException(502, detail="第三方公开页可访问性受限，未取得可验证展示价")
     return {
         "live": True,
         "kind": "real-public-display",
@@ -111,6 +135,7 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         "route": {"from": from_city, "to": to_city},
         "date": date.isoformat(),
         "fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "collectionChannel": channel,
         "notice": "以下为第三方公开页面当次展示价，可能随库存变化；点击平台后请再次核对。",
         "flights": flights,
     }
