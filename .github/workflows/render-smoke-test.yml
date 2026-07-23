@@ -1,4 +1,5 @@
 name: Smoke test Render production
+# production recheck after manual deploy d8940c1
 
 on:
   workflow_dispatch:
