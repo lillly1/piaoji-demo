@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: piaoji-live-fares
+    runtime: docker
+    repo: https://github.com/lillly1/piaoji-demo
+    branch: main
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
