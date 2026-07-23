@@ -2,6 +2,11 @@ name: Refresh public fare snapshot
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/scrape_ctrip.py"
+      - ".github/workflows/refresh-public-fares.yml"
   schedule:
     - cron: "20 4 * * *"
 
