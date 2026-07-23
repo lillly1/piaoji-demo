@@ -117,18 +117,23 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         raise HTTPException(422, detail="仅支持今天起 90 天内的日期")
     source_url = f"https://m.ctrip.com/html5/flight/{origin}-{destination}-day-{day}.html"
     flights: list[dict[str, Any]] = []
+    attempts: list[dict[str, Any]] = []
     channel = "public-html"
     try:
         raw_html = await asyncio.to_thread(fetch_public_html, source_url)
         flights = parse_rows(public_html_text(raw_html), source_url)
-    except Exception:
+        attempts.append({"channel": channel, "bytes": len(raw_html), "rows": len(flights)})
+    except Exception as error:
+        attempts.append({"channel": channel, "error": type(error).__name__, "message": str(error)[:180]})
         flights = []
     if not flights:
         channel = "jina-reader-browser"
         try:
             reader_text = await asyncio.to_thread(fetch_reader_text, source_url)
             flights = parse_rows(reader_text, source_url)
-        except Exception:
+            attempts.append({"channel": channel, "bytes": len(reader_text), "rows": len(flights), "sample": reader_text[:240]})
+        except Exception as error:
+            attempts.append({"channel": channel, "error": type(error).__name__, "message": str(error)[:180]})
             flights = []
     if not flights:
         channel = "crawl4ai-browser"
@@ -144,8 +149,11 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         if result.success:
             markdown = getattr(result.markdown, "raw_markdown", None) or str(result.markdown)
             flights = parse_rows(markdown, source_url)
+            attempts.append({"channel": channel, "bytes": len(markdown), "rows": len(flights), "sample": markdown[:240]})
+        else:
+            attempts.append({"channel": channel, "error": "crawl_failed", "message": str(getattr(result, "error_message", ""))[:180]})
     if not flights:
-        raise HTTPException(502, detail="第三方公开页可访问性受限，未取得可验证展示价")
+        raise HTTPException(502, detail={"message": "第三方公开页可访问性受限，未取得可验证展示价", "attempts": attempts})
     return {
         "live": True,
         "kind": "real-public-display",
@@ -155,6 +163,7 @@ async def fetch_ctrip(from_city: str, to_city: str, date: dt.date) -> dict[str, 
         "date": date.isoformat(),
         "fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
         "collectionChannel": channel,
+        "collectionAttempts": attempts,
         "notice": "以下为第三方公开页面当次展示价，可能随库存变化；点击平台后请再次核对。",
         "flights": flights,
     }
