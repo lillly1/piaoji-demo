@@ -13,18 +13,28 @@ await mkdir(join(dist, ".openai"), { recursive: true });
 await cp(join(root, "index.html"), join(dist, "static", "index.html"));
 await cp(join(root, ".openai", "hosting.json"), join(dist, ".openai", "hosting.json"));
 
-const worker = `export default {
-  async fetch(request, env) {
-    return env.ASSETS.fetch(request);
+const html = await readFile(join(dist, "static", "index.html"), "utf8");
+if (!html.includes("演示数据，实际价格以平台为准")) {
+  throw new Error("Required demo disclaimer is missing");
+}
+
+const worker = `const html = ${JSON.stringify(html)};
+
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname !== "/" && url.pathname !== "/index.html") {
+      return new Response("Not found", { status: 404 });
+    }
+    return new Response(html, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=300"
+      }
+    });
   }
 };
 `;
 
 await writeFile(join(dist, "server", "index.js"), worker, "utf8");
-
-const html = await readFile(join(dist, "static", "index.html"), "utf8");
-if (!html.includes("婕旂ず鏁版嵁锛屽疄闄呬环鏍间互骞冲彴涓哄噯")) {
-  throw new Error("Required demo disclaimer is missing");
-}
-
 console.log("Built static Sites bundle");
